@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meter P.W.A 9 · ระบบมาตรวัดน้ำหลัก กปภ.เขต 9</title>
+<meta name="description" content="ระบบบันทึกและสอบเทียบมาตรวัดน้ำหลัก การประปาส่วนภูมิภาคเขต 9">
+<meta name="theme-color" content="#0B4DA2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Meter PWA9">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="app"><div style="min-height:100vh;display:flex;align-items:center;justify-content:center;color:#5A6B85;font-family:sans-serif">กำลังโหลด Meter P.W.A 9…</div></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<noscript>ต้องเปิดใช้งาน JavaScript</noscript>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<script src="js/config.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/core.js"></script>
+<script src="js/store.js"></script>
+<script src="js/app.js"></script>
+<script src="js/views-a.js"></script>
+<script src="js/views-b.js"></script>
+<script src="js/exports.js"></script>
+<script>App.start();</script>
+</body>
+</html>

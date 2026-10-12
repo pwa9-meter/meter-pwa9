@@ -1,0 +1,17 @@
+{
+  "name": "Meter P.W.A 9 · ระบบมาตรวัดน้ำหลัก กปภ.เขต 9",
+  "short_name": "Meter PWA9",
+  "description": "บันทึกและสอบเทียบมาตรวัดน้ำหลัก การประปาส่วนภูมิภาคเขต 9",
+  "lang": "th",
+  "start_url": "./index.html#/dashboard",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F3F6FA",
+  "theme_color": "#0B4DA2",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
