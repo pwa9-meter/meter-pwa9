@@ -1,5 +1,5 @@
 /* Meter P.W.A 9 — service worker: app shell offline, CDN + map tiles cached as you go */
-const VERSION = 'mpw9-v3';
+const VERSION = 'mpw9-v4';
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './css/app.css',
   './js/config.js', './js/seed.js', './js/core.js', './js/store.js', './js/app.js',
@@ -24,12 +24,12 @@ self.addEventListener('fetch', (e) => {
   if (url.hostname.endsWith('script.google.com') || url.hostname.endsWith('googleusercontent.com')) return;
 
   if (url.origin === location.origin) {
-    // app files: network first so updates arrive, cache when offline
-    e.respondWith(fetch(req).then((res) => {
+    // app files: network first (bypassing the HTTP cache) so updates arrive at once; cache when offline
+    e.respondWith(fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }).then((res) => {
       const copy = res.clone();
       caches.open(VERSION).then((c) => c.put(req, copy));
       return res;
-    }).catch(() => caches.match(req).then((r) => r || caches.match('./index.html'))));
+    }).catch(() => caches.match(req, { ignoreSearch: true }).then((r) => r || caches.match('./index.html'))));
     return;
   }
 

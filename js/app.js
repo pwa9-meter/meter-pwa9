@@ -239,6 +239,7 @@
   ];
 
   const App = {
+    VERSION: '1.2',
     branch: '',
     cleanup: [],
     M, UI, icon,
@@ -396,7 +397,8 @@
         ${S.isAdmin() ? `<a href="#/users" role="menuitem">${icon('users')}จัดการผู้ใช้งาน</a><a href="#/settings" role="menuitem">${icon('settings')}ตั้งค่าระบบ</a>` : ''}
         <a href="#/branches" role="menuitem">${icon('branch')}ความคืบหน้า 27 สาขา</a>
         <a href="#/equipment" role="menuitem">${icon('check')}Check list อุปกรณ์</a>
-        <button type="button" role="menuitem" id="logout-btn">${icon('logout')}ออกจากระบบ</button>`;
+        <button type="button" role="menuitem" id="logout-btn">${icon('logout')}ออกจากระบบ</button>
+        <div class="muted" style="font-size:12px;padding:8px 12px 4px;border-top:1px solid var(--line);margin-top:6px">Meter P.W.A 9 · เวอร์ชัน ${App.VERSION}</div>`;
       document.body.appendChild(m);
       m.addEventListener('click', (e) => { if (e.target.closest('a')) m.remove(); });
       document.getElementById('logout-btn').onclick = () => {
