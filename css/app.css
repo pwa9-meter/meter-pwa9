@@ -57,7 +57,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 @keyframes pulse { 50% { opacity: .3; } }
 .user-btn { display: flex; align-items: center; gap: 10px; background: transparent; border: 0; color: #fff; cursor: pointer; min-height: 44px; padding: 0 4px; border-radius: 10px; }
 .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--ink); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex: none; }
-.user-meta { text-align: left; line-height: 1.2; font-size: 13px; }
+.avatar { overflow: hidden; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.user-meta {text-align: left; line-height: 1.2; font-size: 13px; }
 .user-meta b { display: block; font-size: 14px; }
 
 .layout { display: flex; min-height: calc(100vh - 64px); }

@@ -7,7 +7,7 @@
 
 var TOKEN_DAYS = 30;
 var SHEETS = {
-  Users: ['empId', 'name', 'role', 'branch', 'active', 'salt', 'hash', 'createdAt'],
+  Users: ['empId', 'name', 'role', 'branch', 'active', 'salt', 'hash', 'createdAt', 'avatar'],
   Meters: ['id', 'branch', 'place', 'category', 'brand', 'model', 'kind', 'size', 'asset', 'lat', 'lng', 'status', 'factor', 'note', 'updatedAt', 'updatedBy', 'json'],
   Tests: ['id', 'date', 'fiscalYear', 'round', 'branch', 'place', 'meterId', 'U', 'M', 'oldFactor', 'errPct', 'newFactor', 'result', 'opinion', 'createdByName', 'updatedAt', 'json'],
   Settings: ['key', 'value']
@@ -52,6 +52,7 @@ function route_(action, p, token) {
     case 'saveUser': need(admin); return locked_(function () { saveUser_(p.user, p.password, me); });
     case 'deleteUser': need(admin); return locked_(function () { if (p.empId === me.empId) throw new Error('ลบบัญชีของตัวเองไม่ได้'); remove_('Users', p.empId); });
     case 'changePassword': return locked_(function () { changePassword_(me.empId, p.oldPw, p.newPw); });
+    case 'setAvatar': return locked_(function () { setAvatar_(me.empId, p.avatar); });
     case 'restore': need(admin); return locked_(function () { restore_(p.meters || [], p.tests || []); });
     case 'savePhoto': need(canEdit); return savePhoto_(p.id, p.dataUrl);
   }
@@ -106,7 +107,17 @@ function issue_(empId) {
     if (k.indexOf('tok_') === 0) { try { if (JSON.parse(all[k]).exp < Date.now()) props.deleteProperty(k); } catch (e) { props.deleteProperty(k); } }
   });
   props.setProperty('tok_' + token, JSON.stringify({ empId: String(empId), exp: exp }));
-  return { empId: String(u.empId), name: u.name, role: u.role, branch: u.branch || '', token: token, exp: exp };
+  return { empId: String(u.empId), name: u.name, role: u.role, branch: u.branch || '', avatar: u.avatar || '', token: token, exp: exp };
+}
+
+function setAvatar_(empId, avatar) {
+  avatar = String(avatar || '');
+  if (avatar && !/^data:image\/(jpeg|png|webp);base64,/.test(avatar)) throw new Error('รูปไม่ถูกต้อง');
+  if (avatar.length > 45000) throw new Error('รูปใหญ่เกินไป');
+  var u = rows_('Users').filter(function (x) { return String(x.empId) === empId; })[0];
+  if (!u) throw new Error('ไม่พบผู้ใช้');
+  u.avatar = avatar;
+  upsert_('Users', u);
 }
 
 function auth_(token) {
@@ -122,14 +133,14 @@ function auth_(token) {
 }
 
 function users_() {
-  return rows_('Users').map(function (u) { return { empId: String(u.empId), name: u.name, role: u.role, branch: u.branch || '', active: !(String(u.active) === 'false' || String(u.active) === 'FALSE'), createdAt: u.createdAt }; });
+  return rows_('Users').map(function (u) { return { empId: String(u.empId), name: u.name, role: u.role, branch: u.branch || '', active: !(String(u.active) === 'false' || String(u.active) === 'FALSE'), createdAt: u.createdAt, avatar: u.avatar || '' }; });
 }
 
 function saveUser_(u, pw, me) {
   if (!/^\d{3,10}$/.test(String(u.empId))) throw new Error('รหัสพนักงานต้องเป็นตัวเลข');
   var old = rows_('Users').filter(function (x) { return String(x.empId) === String(u.empId); })[0];
   if (String(u.empId) === me.empId && u.role !== 'admin') throw new Error('ไม่สามารถลดสิทธิ์ผู้ดูแลของตัวเองได้');
-  var rec = { empId: String(u.empId), name: u.name, role: u.role || 'staff', branch: u.branch || '', active: u.active !== false, createdAt: old ? old.createdAt : new Date().toISOString() };
+  var rec = { empId: String(u.empId), name: u.name, role: u.role || 'staff', branch: u.branch || '', active: u.active !== false, createdAt: old ? old.createdAt : new Date().toISOString(), avatar: old ? old.avatar : '' };
   if (pw) {
     if (String(pw).length < 8) throw new Error('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
     rec.salt = newSalt_(); rec.hash = hash_(rec.salt, pw);
@@ -198,6 +209,9 @@ function sheet_(name) {
     sh = ss.insertSheet(name);
     sh.getRange(1, 1, 1, SHEETS[name].length).setValues([SHEETS[name]]).setFontWeight('bold').setBackground('#E6EEF9');
     sh.setFrozenRows(1);
+  } else if (sh.getLastColumn() < SHEETS[name].length) {
+    // a newer version added columns: extend the header row in place
+    sh.getRange(1, 1, 1, SHEETS[name].length).setValues([SHEETS[name]]).setFontWeight('bold').setBackground('#E6EEF9');
   }
   return sh;
 }

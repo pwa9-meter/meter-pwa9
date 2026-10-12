@@ -155,6 +155,23 @@
     ringColor(r) {
       return { pass: '#2E9E6B', factor: '#F08C2E', broken: '#A3122A', none: '#C3CFD1' }[r] || '#C3CFD1';
     },
+    avatar(u, size) {
+      const s = size || 36;
+      const inner = u && u.avatar ? `<img src="${esc(u.avatar)}" alt="">` : esc(UI.initials(u && u.name));
+      return `<span class="avatar" style="width:${s}px;height:${s}px;font-size:${Math.round(s * 0.39)}px">${inner}</span>`;
+    },
+    // square-crop + resize to 160px JPEG (fits in one Google Sheets cell)
+    async readAvatar(file) {
+      const url = URL.createObjectURL(file);
+      try {
+        const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+        const side = Math.min(img.width, img.height);
+        const cv = document.createElement('canvas');
+        cv.width = cv.height = 160;
+        cv.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, 160, 160);
+        return cv.toDataURL('image/jpeg', 0.8);
+      } finally { URL.revokeObjectURL(url); }
+    },
     initials(name) {
       const s = String(name || '').trim();
       if (!s) return '?';
@@ -325,7 +342,7 @@
           </div>
           <button class="sync-pill" id="sync-pill" type="button" title="สถานะข้อมูล"></button>
           <button class="user-btn" id="user-btn" type="button" aria-haspopup="menu">
-            <span class="avatar">${esc(UI.initials(sess.name))}</span>
+            ${UI.avatar(sess, 36)}
             <span class="user-meta"><b>${esc(sess.name)}</b>${esc(sess.empId)} · ${sess.role === 'admin' ? 'ผู้ดูแลระบบ' : sess.role === 'staff' ? 'เจ้าหน้าที่' : 'ผู้ดูข้อมูล'}</span>
           </button>
         </header>
@@ -374,8 +391,8 @@
       m.className = 'menu';
       m.id = 'user-menu';
       m.setAttribute('role', 'menu');
-      m.innerHTML = `<div class="menu-head"><b>${esc(s.name)}</b>รหัสพนักงาน ${esc(s.empId)}</div>
-        <a href="#/account" role="menuitem">${icon('key')}เปลี่ยนรหัสผ่าน</a>
+      m.innerHTML = `<div class="menu-head" style="display:flex;gap:12px;align-items:center">${UI.avatar(s, 44)}<div><b>${esc(s.name)}</b>รหัสพนักงาน ${esc(s.empId)}</div></div>
+        <a href="#/account" role="menuitem">${icon('users')}รูปโปรไฟล์ / เปลี่ยนรหัสผ่าน</a>
         ${S.isAdmin() ? `<a href="#/users" role="menuitem">${icon('users')}จัดการผู้ใช้งาน</a><a href="#/settings" role="menuitem">${icon('settings')}ตั้งค่าระบบ</a>` : ''}
         <a href="#/branches" role="menuitem">${icon('branch')}ความคืบหน้า 27 สาขา</a>
         <a href="#/equipment" role="menuitem">${icon('check')}Check list อุปกรณ์</a>

@@ -16,8 +16,11 @@
     intervalMonths: 6,        // remind when last test is older than this
     unitLine: 'การประปาส่วนภูมิภาคเขต ๙ กองระบบจำหน่าย งานมาตรวัดน้ำ โทร. ๐-๕๓๓๔-๓๘๐๐ ต่อ ๕๒๐๒',
     addressee: 'หัวหน้างานมาตรวัดน้ำ',
-    signerName: '',
-    signerTitle: 'หัวหน้างาน งานมาตรวัดน้ำ',
+    signerName: 'นางชุลีพร  พรมอุทัย',
+    signerTitle: 'หัวหน้างาน ๘ งานมาตรวัดน้ำ',
+    endorseTo: 'ผช.กปภ.ข.๙ (ว.)',
+    endorserName: 'นายครรชิต  พูนพรพัฒนากุล',
+    endorserTitle: 'ผู้อำนวยการกองระบบจำหน่าย',
     seeded: false
   };
 
@@ -85,6 +88,7 @@
   }
 
   const Store = {
+    DEFAULT_SETTINGS,
     apiUrl: '',
     get mode() { return this.apiUrl ? 'remote' : 'local'; },
     data: { meters: [], tests: [], users: [], settings: Object.assign({}, DEFAULT_SETTINGS) },
@@ -104,6 +108,9 @@
       this.data.tests = (await kvGet('tests')) || [];
       this.data.users = (await kvGet('users')) || [];
       this.data.settings = Object.assign({}, DEFAULT_SETTINGS, (await kvGet('settings')) || {});
+      // earlier versions cached placeholder memo values; replace them with the form's real defaults
+      if (this.data.settings.signerTitle === 'หัวหน้างาน งานมาตรวัดน้ำ') this.data.settings.signerTitle = DEFAULT_SETTINGS.signerTitle;
+      if (!this.data.settings.signerName) this.data.settings.signerName = DEFAULT_SETTINGS.signerName;
       this.queue = (await kvGet('queue')) || [];
       if (this.mode === 'local' && !this.data.settings.seeded && this.data.meters.length === 0) {
         this.data.meters = (window.SEED_METERS || []).map((m) => Object.assign({ updatedAt: Date.now(), maint: [] }, m));
@@ -157,7 +164,7 @@
       if (!u || !u.active) throw new Error('ไม่พบรหัสพนักงานนี้ หรือบัญชีถูกปิดใช้งาน');
       const h = await sha256(u.salt + password);
       if (h !== u.hash) throw new Error('รหัสผ่านไม่ถูกต้อง');
-      return this.setSession({ empId: u.empId, name: u.name, role: u.role, branch: u.branch || '', token: 'local', exp: Date.now() + 7 * 864e5 });
+      return this.setSession({ empId: u.empId, name: u.name, role: u.role, branch: u.branch || '', avatar: u.avatar || '', token: 'local', exp: Date.now() + 7 * 864e5 });
     },
 
     setSession(s) {
@@ -177,6 +184,23 @@
       const u = this.data.users.find((x) => x.empId === this.session.empId);
       if (!u || (await sha256(u.salt + oldPw)) !== u.hash) throw new Error('รหัสผ่านเดิมไม่ถูกต้อง');
       await this.saveUserLocal(u, newPw);
+    },
+
+    async setAvatar(dataUrl) {
+      if (this.mode === 'remote') {
+        try { await api('setAvatar', { avatar: dataUrl }); } catch (e) {
+          if (/unknown action/.test(e.message)) throw new Error('เซิร์ฟเวอร์ยังเป็นเวอร์ชันเก่า — ผู้ดูแลต้องอัปเดต Code.gs และ Deploy เวอร์ชันใหม่ก่อน');
+          throw e;
+        }
+      } else {
+        const u = this.data.users.find((x) => x.empId === this.session.empId);
+        if (u) u.avatar = dataUrl;
+      }
+      const u2 = this.data.users.find((x) => x.empId === this.session.empId);
+      if (u2) u2.avatar = dataUrl;
+      this.setSession(Object.assign({}, this.session, { avatar: dataUrl }));
+      await this.persist();
+      this.emit();
     },
 
     async saveUserLocal(u, password) {

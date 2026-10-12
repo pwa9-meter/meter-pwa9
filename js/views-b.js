@@ -455,7 +455,7 @@
         ${S.mode === 'local' ? `<div class="alert alert-warn">${icon('warn', 20, 'var(--warn)')}<div><b>โหมดเก็บในเครื่อง</b><br>บัญชีผู้ใช้ใช้ได้เฉพาะในเบราว์เซอร์นี้ หากต้องการให้ทุกคนเข้าจากมือถือของตัวเอง ให้เชื่อมฐานข้อมูลกลางที่ <a href="#/settings">ตั้งค่าระบบ</a></div></div>` : ''}
         <section class="card"><div class="table-wrap"><table class="tbl" style="min-width:720px">
           <thead><tr><th>รหัสพนักงาน</th><th>ชื่อ-สกุล</th><th>สิทธิ์</th><th>สาขาเริ่มต้น</th><th>สถานะ</th><th class="r">จัดการ</th></tr></thead>
-          <tbody>${list.map((u) => `<tr><td class="num"><b>${esc(u.empId)}</b></td><td>${esc(u.name)}</td><td>${esc(roles[u.role] || u.role)}</td><td>${esc(u.branch || 'ทุกสาขา')}</td>
+          <tbody>${list.map((u) => `<tr><td class="num"><b>${esc(u.empId)}</b></td><td><span style="display:inline-flex;align-items:center;gap:10px">${UI.avatar(u, 32)}${esc(u.name)}</span></td><td>${esc(roles[u.role] || u.role)}</td><td>${esc(u.branch || 'ทุกสาขา')}</td>
             <td>${u.active === false || u.active === 'FALSE' ? '<span class="badge" style="background:var(--bad-bg);color:var(--bad)">ปิดใช้งาน</span>' : '<span class="badge" style="background:var(--ok-bg);color:var(--ok)">ใช้งาน</span>'}</td>
             <td class="r"><button class="btn btn-sm" data-edit="${esc(u.empId)}">${icon('edit', 16)}แก้ไข</button> ${u.empId !== S.session.empId ? `<button class="btn btn-sm btn-danger" data-del="${esc(u.empId)}" aria-label="ลบ ${esc(u.name)}">${icon('trash', 16)}</button>` : ''}</td></tr>`).join('')}</tbody>
         </table></div></section>
@@ -532,8 +532,11 @@
         <div class="form-grid">
           <label class="field span-all"><span>ส่วนราชการ</span><input id="st-unit" class="input" value="${esc(s.unitLine)}"></label>
           <label class="field"><span>เรียน</span><input id="st-to" class="input" value="${esc(s.addressee)}"></label>
-          <label class="field"><span>ชื่อผู้ลงนาม</span><input id="st-sn" class="input" value="${esc(s.signerName)}" placeholder="(ชื่อ-สกุล)"></label>
-          <label class="field"><span>ตำแหน่งผู้ลงนาม</span><input id="st-st" class="input" value="${esc(s.signerTitle)}"></label>
+          <label class="field"><span>ชื่อผู้ลงนาม</span><input id="st-sn" class="input" value="${esc(s.signerName || S.DEFAULT_SETTINGS.signerName)}" placeholder="(ชื่อ-สกุล)"></label>
+          <label class="field"><span>ตำแหน่งผู้ลงนาม</span><input id="st-st" class="input" value="${esc(s.signerTitle || S.DEFAULT_SETTINGS.signerTitle)}"></label>
+          <label class="field"><span>ช่องเกษียน: เรียน</span><input id="st-et" class="input" value="${esc(s.endorseTo || S.DEFAULT_SETTINGS.endorseTo)}"></label>
+          <label class="field"><span>ช่องเกษียน: ชื่อผู้ลงนาม</span><input id="st-en" class="input" value="${esc(s.endorserName || S.DEFAULT_SETTINGS.endorserName)}"></label>
+          <label class="field"><span>ช่องเกษียน: ตำแหน่ง</span><input id="st-ett" class="input" value="${esc(s.endorserTitle || S.DEFAULT_SETTINGS.endorserTitle)}"></label>
         </div>
         <div><button class="btn btn-primary" id="st-save">บันทึกการตั้งค่า</button></div>
       </section>
@@ -560,7 +563,7 @@
     $('#st-save').onclick = async () => {
       const limit = C.num($('#st-limit').value);
       if (!(limit > 0 && limit < 50)) return UI.toast('เกณฑ์ต้องอยู่ระหว่าง 0–50%', 'bad');
-      await S.saveSettings({ limit, intervalMonths: parseInt($('#st-int').value, 10) || 6, unitLine: $('#st-unit').value, addressee: $('#st-to').value, signerName: $('#st-sn').value, signerTitle: $('#st-st').value });
+      await S.saveSettings({ limit, intervalMonths: parseInt($('#st-int').value, 10) || 6, unitLine: $('#st-unit').value, addressee: $('#st-to').value, signerName: $('#st-sn').value, signerTitle: $('#st-st').value, endorseTo: $('#st-et').value, endorserName: $('#st-en').value, endorserTitle: $('#st-ett').value });
       UI.toast('บันทึกการตั้งค่าแล้ว', 'ok');
     };
     const msg = (html, cls) => { $('#st-api-msg').className = cls || ''; $('#st-api-msg').innerHTML = html; };
@@ -614,7 +617,19 @@
   // ---------- account ----------
   V.account = function (view) {
     view.innerHTML = `<div class="page" style="max-width:520px">
-      <div class="page-head"><h1>เปลี่ยนรหัสผ่าน</h1></div>
+      <div class="page-head"><h1>บัญชีของฉัน</h1></div>
+      <section class="card">
+        <h2>รูปโปรไฟล์</h2>
+        <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+          <span id="ac-av">${UI.avatar(S.session, 88)}</span>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button type="button" class="btn" id="ac-pic">${icon('camera')}เลือก / ถ่ายรูป</button>
+            ${S.session.avatar ? `<button type="button" class="btn btn-ghost btn-sm" id="ac-pic-rm">ลบรูป ใช้ตัวอักษรแทน</button>` : ''}
+          </div>
+        </div>
+        <div class="muted" style="font-size:13px">ระบบจะครอปเป็นสี่เหลี่ยมจัตุรัสและย่อขนาดให้อัตโนมัติ</div>
+      </section>
+      <h2 style="margin:6px 0 0;font-size:18px">เปลี่ยนรหัสผ่าน</h2>
       <form class="card" id="ac-form">
         <div class="muted">${esc(S.session.name)} · รหัสพนักงาน ${esc(S.session.empId)}</div>
         <div id="ac-err" class="form-error hidden"></div>
@@ -623,6 +638,20 @@
         <label class="field"><span>ยืนยันรหัสผ่านใหม่</span><input id="ac-new2" type="password" class="input" autocomplete="new-password"></label>
         <button class="btn btn-primary" type="submit">เปลี่ยนรหัสผ่าน</button>
       </form></div>`;
+    const savePic = async (dataUrl) => {
+      try {
+        await S.setAvatar(dataUrl);
+        UI.toast(dataUrl ? 'เปลี่ยนรูปโปรไฟล์แล้ว' : 'ลบรูปโปรไฟล์แล้ว', 'ok');
+        App.rebuildShell();
+      } catch (ex) { UI.toast(ex.message, 'bad'); }
+    };
+    view.querySelector('#ac-pic').onclick = async () => {
+      const f = await UI.pickFile('image/*');
+      if (!f) return;
+      try { await savePic(await UI.readAvatar(f)); } catch (ex) { UI.toast('อ่านรูปไม่ได้', 'bad'); }
+    };
+    const rm = view.querySelector('#ac-pic-rm');
+    if (rm) rm.onclick = () => savePic('');
     view.querySelector('#ac-form').onsubmit = async (e) => {
       e.preventDefault();
       const err = view.querySelector('#ac-err');
