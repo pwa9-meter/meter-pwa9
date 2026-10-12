@@ -101,7 +101,8 @@
 
     async init() {
       const cfg = (window.APP_CONFIG && window.APP_CONFIG.apiUrl) || '';
-      this.apiUrl = lsGet(API_KEY) || cfg || '';
+      // the published config wins, so every device follows the server the admin deployed
+      this.apiUrl = cfg || lsGet(API_KEY) || '';
       try { this.session = JSON.parse(lsGet(SESSION_KEY) || 'null'); } catch (e) { this.session = null; }
       if (this.session && this.session.exp && this.session.exp < Date.now()) this.session = null;
       this.data.meters = (await kvGet('meters')) || [];
