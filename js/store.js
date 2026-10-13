@@ -16,11 +16,11 @@
     intervalMonths: 6,        // remind when last test is older than this
     unitLine: 'การประปาส่วนภูมิภาคเขต ๙ กองระบบจำหน่าย งานมาตรวัดน้ำ โทร. ๐-๕๓๓๔-๓๘๐๐ ต่อ ๕๒๐๒',
     addressee: 'หัวหน้างานมาตรวัดน้ำ',
-    signerName: 'นางชุลีพร  พรมอุทัย',
-    signerTitle: 'หัวหน้างาน ๘ งานมาตรวัดน้ำ',
+    signerName: '',
+    signerTitle: '',
     endorseTo: 'ผช.กปภ.ข.๙ (ว.)',
-    endorserName: 'นายครรชิต  พูนพรพัฒนากุล',
-    endorserTitle: 'ผู้อำนวยการกองระบบจำหน่าย',
+    endorserName: '',
+    endorserTitle: '',
     seeded: false
   };
 
@@ -109,9 +109,7 @@
       this.data.tests = (await kvGet('tests')) || [];
       this.data.users = (await kvGet('users')) || [];
       this.data.settings = Object.assign({}, DEFAULT_SETTINGS, (await kvGet('settings')) || {});
-      // earlier versions cached placeholder memo values; replace them with the form's real defaults
-      if (this.data.settings.signerTitle === 'หัวหน้างาน งานมาตรวัดน้ำ') this.data.settings.signerTitle = DEFAULT_SETTINGS.signerTitle;
-      if (!this.data.settings.signerName) this.data.settings.signerName = DEFAULT_SETTINGS.signerName;
+      this.clearLegacySigners(this.data.settings);
       this.queue = (await kvGet('queue')) || [];
       if (this.mode === 'local' && !this.data.settings.seeded && this.data.meters.length === 0) {
         this.data.meters = (window.SEED_METERS || []).map((m) => Object.assign({ updatedAt: Date.now(), maint: [] }, m));
@@ -119,6 +117,12 @@
         await this.persist();
       }
       window.addEventListener('online', () => this.flush());
+    },
+
+    // names that earlier versions pre-filled on the memo; signature blocks are now left blank to sign by hand
+    clearLegacySigners(s) {
+      const old = ['นางชุลีพร  พรมอุทัย', 'หัวหน้างาน ๘ งานมาตรวัดน้ำ', 'หัวหน้างาน งานมาตรวัดน้ำ', 'นายครรชิต  พูนพรพัฒนากุล', 'ผู้อำนวยการกองระบบจำหน่าย'];
+      ['signerName', 'signerTitle', 'endorserName', 'endorserTitle'].forEach((k) => { if (old.includes(s[k])) s[k] = ''; });
     },
 
     async persist() {
@@ -257,6 +261,7 @@
         this.data.meters = d.meters || [];
         this.data.tests = d.tests || [];
         this.data.settings = Object.assign({}, DEFAULT_SETTINGS, this.data.settings, d.settings || {});
+        this.clearLegacySigners(this.data.settings);
         if (this.isAdmin()) this.data.users = d.users || [];
         // re-apply writes still waiting in the queue so they are not lost from view
         this.queue.forEach((q) => this.applyLocal(q));

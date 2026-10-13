@@ -98,12 +98,14 @@
     const period = th(memo.period || (dates.length ? (dates[0] === dates[dates.length - 1] ? C.thDate(dates[0], true) : `${C.thDate(dates[0], true)} – ${C.thDate(dates[dates.length - 1], true)}`) : '…………………'));
     const factorRows = rows.filter((x) => x.r === 'factor');
     const brokenRows = rows.filter((x) => x.r === 'broken');
+    // memo table: same places as the summary table, distribution meters only (no raw-water meters)
+    const placeRows = rows.filter((x) => !C.isRaw(x.m)).map((x) => ({ place: x.m.place, k: x.k ? th(C.fmt(x.k, 4)) : '-' }));
     const D = Store.DEFAULT_SETTINGS || {};
     const pick = (k) => s[k] || D[k] || '';
     return {
-      s, memo, period, factorRows, brokenRows,
-      unitLine: pick('unitLine'), addressee: pick('addressee'),
-      signer: memo.signer || pick('signerName') || '……………………………', signerTitle: th(pick('signerTitle')),
+      s, memo, period, factorRows, brokenRows, placeRows,
+      unitLine: pick('unitLine'), addressee: memo.addressee || pick('addressee'),
+      signer: memo.signer || pick('signerName'), signerTitle: th(pick('signerTitle')),
       endorseTo: th(pick('endorseTo')), endorserName: pick('endorserName'), endorserTitle: pick('endorserTitle'),
       branch: o.branch || '…………',
       no: th(memo.no || '…………………'),
@@ -119,13 +121,14 @@
       x.t.broken ? '-' : th(C.fmtSigned(x.c.err, 2)), x.k ? th(C.fmt(x.k, 4)) : '-', x.t.broken ? 'มาตรชำรุด' : (x.t.note || '')]);
   }
   const ATT_HEAD = ['ลำดับที่', 'กปภ.สาขา', 'สถานที่', 'ยี่ห้อ', 'รุ่น', 'ชนิด', 'ขนาด (มม.)', 'ค่าความคลาดเคลื่อน (%)', 'ค่าตัวคูณปรับแก้', 'หมายเหตุ'];
+  const ATT_HEAD_HTML = ['ลำดับที่', 'กปภ.สาขา', 'สถานที่', 'ยี่ห้อ', 'รุ่น', 'ชนิด', 'ขนาด<br>(มม.)', 'ค่าความ<br>คลาดเคลื่อน (%)', 'ค่าตัวคูณ<br>ปรับแก้', 'หมายเหตุ'];
 
   function memoHTML(rows, o) {
     const p = memoParts(rows, o);
     const ed = (key, val) => o.editable ? `<span class="editable" contenteditable="true" data-memo="${key}" title="แก้ไขได้">${esc(val)}</span>` : esc(val);
-    const tableRows = p.factorRows.length
-      ? p.factorRows.map((x) => `<tr><td>${esc(x.m.place)}</td><td class="k">${th(C.fmt(x.k, 4))}</td></tr>`).join('')
-      : '<tr><td>– ไม่มีมาตรที่ต้องใช้ค่าตัวคูณปรับแก้ –</td><td class="k">-</td></tr>';
+    const tableRows = p.placeRows.length
+      ? p.placeRows.map((x) => `<tr><td>${esc(x.place)}</td><td class="k">${x.k}</td></tr>`).join('')
+      : '<tr><td>– ไม่มีมาตรน้ำจ่ายที่ทดสอบ –</td><td class="k">-</td></tr>';
     const broken = p.brokenRows.length ? `<p class="mp">ทั้งนี้ มีมาตรวัดน้ำหลักชำรุดไม่สามารถทดสอบได้ จำนวน ${th(p.brokenRows.length)} แห่ง ได้แก่ ${p.brokenRows.map((x) => esc(x.m.place)).join(', ')} เห็นควรแจ้งสาขาดำเนินการซ่อมแซมต่อไป</p>` : '';
     const foot = `<img class="memo-foot" src="${asset('img/footer-pwa.png')}" alt="">`;
     const att = attachmentRows(rows);
@@ -141,17 +144,17 @@
         <table class="mtbl"><thead><tr><th style="width:105mm">สถานที่</th><th>ค่าตัวคูณปรับแก้</th></tr></thead><tbody>${tableRows}</tbody></table>
         ${broken}
         <p class="mp" style="margin-top:14pt">จึงเรียนมาเพื่อโปรดทราบ และพิจารณาแจ้ง กปภ.สาขา${esc(p.branch)} ให้ใช้ค่าตัวคูณปรับแก้ ตั้งแต่วันที่ ${ed('effective', p.effective)} เป็นต้นไป จะขอบคุณยิ่ง</p>
-        <div class="msign">(${ed('signer', p.signer)})<div class="t">${esc(p.signerTitle)}</div></div>
+        <div class="msign">${p.signer ? `(${ed('signer', p.signer)})` : '&nbsp;'}<div class="t">${esc(p.signerTitle) || '&nbsp;'}</div></div>
         <div class="mboxes">
           <div>เรียน ${esc(p.endorseTo)}<div class="ind">เพื่อโปรดพิจารณาแจ้ง กปภ.สาขา</div>ดำเนินการในส่วนที่เกี่ยวข้องต่อไป จะขอบคุณยิ่ง
-            <div class="sig">(${esc(p.endorserName)})<br>${esc(p.endorserTitle)}</div></div>
+            <div class="sig">${p.endorserName ? `(${esc(p.endorserName)})` : '&nbsp;'}<br>${esc(p.endorserTitle) || '&nbsp;'}</div></div>
           <div>- ทราบ<br>- เรียน <u>ผจก.กปภ.สาขา${esc(o.branch || '')}</u><div class="ind">เพื่อดำเนินการในส่วนที่เกี่ยวข้องต่อไป</div></div>
         </div>
         ${foot}
       </div>
       <div class="paper memo-a4 memo-att">
         <div class="att-title">เอกสารแนบท้าย<br>ตารางที่ ๑ ผลการทดสอบความเที่ยงตรงของมาตรวัดน้ำหลัก กปภ.สาขา${esc(p.branch)} ครั้งที่ ${p.round}/${p.fy}</div>
-        <table><thead><tr>${ATT_HEAD.map((h) => `<th>${h}</th>`).join('')}</tr></thead>
+        <table><thead><tr>${ATT_HEAD_HTML.map((h) => `<th>${h}</th>`).join('')}</tr></thead>
           <tbody>${att.map((r) => `<tr>${r.map((v, i) => `<td class="${[0, 6, 7, 8].includes(i) ? 'c' : ''}">${esc(v)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="10" class="c">ไม่มีข้อมูล</td></tr>`}</tbody></table>
         <div style="margin-top:6pt;font-size:13pt">หมายเหตุ: เกณฑ์ความคลาดเคลื่อนที่ยอมรับ ±${th(M.limit())}%</div>
         ${foot}
@@ -160,7 +163,55 @@
   }
 
   // ---------- print via hidden iframe (→ "Save as PDF") ----------
+  // Phones cannot print from a hidden frame: render the pages to a real PDF file instead.
+  let h2pLib = null;
+  function loadH2P() {
+    if (window.html2pdf) return Promise.resolve(window.html2pdf);
+    if (!h2pLib) {
+      h2pLib = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        s.onload = () => resolve(window.html2pdf);
+        s.onerror = () => { h2pLib = null; reject(new Error('โหลดตัวสร้าง PDF ไม่ได้ (ต้องเชื่อมต่ออินเทอร์เน็ต)')); };
+        document.head.appendChild(s);
+      });
+    }
+    return h2pLib;
+  }
+  async function savePdf(inner, landscape, title, memo) {
+    let lib;
+    try { lib = await loadH2P(); } catch (e) { return UI.toast(e.message, 'bad'); }
+    UI.toast('กำลังสร้างไฟล์ PDF…');
+    const pageCss = DOC_CSS.replace(/body\{[^}]*\}/, '') +
+      '.pdf-root .memo-a4{box-shadow:none;margin:0;height:294mm;min-height:0;overflow:hidden}.pdf-root .memo-a4+.memo-a4{margin-top:0}' +
+      '.pdf-root .memo-att{padding-left:15mm;padding-right:12mm}.pdf-root .memo-att table{font-size:8.3pt}.pdf-root .memo-att th,.pdf-root .memo-att td{white-space:nowrap;padding:2px 4px}' +
+      '.pdf-root .paper-port{padding:0 0 0 6mm}.pdf-root .doc-stage{background:none;padding:0}';
+    const wrap = document.createElement('div');
+    wrap.className = 'pdf-root';
+    wrap.style.cssText = `width:${landscape ? 277 : (memo ? 210 : 190)}mm;background:#fff;color:#000;font-family:Sarabun,sans-serif`;
+    wrap.innerHTML = `<style>${pageCss}</style>` + inner;
+    // the PDF renderer only wraps lines at spaces: mark Thai word boundaries with zero-width spaces
+    if (window.Intl && Intl.Segmenter) {
+      const seg = new Intl.Segmenter('th', { granularity: 'word' });
+      const walk = document.createTreeWalker(wrap, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      while (walk.nextNode()) if (/[฀-๿]/.test(walk.currentNode.nodeValue) && walk.currentNode.parentNode.nodeName !== 'STYLE') nodes.push(walk.currentNode);
+      nodes.forEach((n) => { n.nodeValue = Array.from(seg.segment(n.nodeValue), (x) => x.segment).join('​').replace(/​(\s)|(\s)​/g, '$1$2'); });
+    }
+    const name = (title || 'Meter P.W.A 9').replace(/[\\/:*?"<>|]/g, '') + '.pdf';
+    try {
+      const blob = await lib().set({
+        margin: memo ? 0 : 8, filename: name, image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: landscape ? 'landscape' : 'portrait' },
+        pagebreak: memo ? { mode: ['css'], before: '.memo-att' } : { mode: ['css', 'legacy'], avoid: 'tr' }
+      }).from(wrap).outputPdf('blob');
+      await UI.download(name, blob);
+    } catch (e) { UI.toast('สร้าง PDF ไม่สำเร็จ: ' + e.message, 'bad'); }
+  }
+
   function printHTML(inner, landscape, title, memo) {
+    if (UI.isMobile()) return savePdf(inner, landscape, title, memo);
     const f = document.createElement('iframe');
     f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
     document.body.appendChild(f);
@@ -189,7 +240,7 @@
       return clone.outerHTML;
     }).join('');
     printHTML(html, landscape && !memo, memo ? 'บันทึกข้อความรายงานสาขา' : 'รายงานผลการตรวจสอบมาตรวัดน้ำหลัก', memo);
-    UI.toast('เลือก "บันทึกเป็น PDF" ในหน้าต่างพิมพ์เพื่อได้ไฟล์ PDF');
+    if (!UI.isMobile()) UI.toast('เลือก "บันทึกเป็น PDF" ในหน้าต่างพิมพ์เพื่อได้ไฟล์ PDF');
   }
 
   // ---------- single test sheet (รายงานผลการทดสอบมาตรวัดน้ำหลัก) ----------
@@ -207,7 +258,7 @@
       <div class="doc-title" style="font-size:20px;margin-bottom:2px">รายงานผลการทดสอบมาตรวัดน้ำหลัก (${esc(m.category ? m.category.replace('มาตร', '') : 'น้ำจ่าย')})</div>
       <div style="text-align:center;margin-bottom:10px">งานมาตรวัดน้ำ กองระบบจำหน่าย การประปาส่วนภูมิภาคเขต 9</div>
       <div class="ts-grid">${row('การประปาส่วนภูมิภาค สาขา', m.branch)}${row('ครั้งที่ / ปีงบประมาณ', `${t.round || '-'}/${t.fiscalYear}`)}${row('สถานที่', m.place)}${row('มาตร', `${m.brand} ${m.model} · ${m.kind} · ${m.size} มม.`)}</div>
-      <div class="ts-h">Ultrasonic Flowmeter เขตฯ (U)</div>
+      <div class="ts-h">Ultrasonic Flowmeter เขต 9 (U)</div>
       <div class="ts-grid">${row('ยี่ห้อ', d.brand)}${row('รุ่น', d.model)}${row('ขนาดเส้นผ่าศูนย์กลางท่อที่วัด', d.pipeSize)}${row('เบอร์หัวเซนเซอร์ที่ใช้วัด', d.sensor)}${row('ชนิดท่อ', d.pipeType)}${row('เส้นผ่าศูนย์กลางภายนอกท่อ (Pipe O.D.)', d.od)}${row('ความหนาผนังท่อ', d.wall)}${row('ชนิดของวัสดุเคลือบท่อ', d.lining)}${row('ความหนาของวัสดุเคลือบท่อ', d.liningThk)}${row('รูปแบบการติดตั้งหัวเซนเซอร์', d.mount)}${row('ระยะห่างของหัวเซนเซอร์', d.spacing)}${row('ความเร็วน้ำ V (m/s)', t.velocity)}</div>
       <div class="ts-h">ค่า Diagnostic ของเครื่องอัลตร้าโซนิคโฟลว์มิเตอร์</div>
       <div class="ts-grid">${row('Soundspeed', g.soundspeed)}${row('Signal Strength UP / DOWN', `${g.sigUp || '-'} / ${g.sigDown || '-'}`)}${row('Q UP / DOWN', `${g.qUp || '-'} / ${g.qDown || '-'}`)}${row('Amp UP / DOWN', `${g.ampUp || '-'} / ${g.ampDown || '-'}`)}</div>
@@ -283,13 +334,13 @@
     const lineBorders = { top: line, bottom: line, left: line, right: line, insideHorizontal: line, insideVertical: line };
     const cell = (children, width, opt) => new D.TableCell(Object.assign({ children, width: { size: width, type: D.WidthType.DXA }, margins: { left: 100, right: 100 } }, opt || {}));
 
-    const factor = p.factorRows.length ? p.factorRows : [null];
+    const factor = p.placeRows.length ? p.placeRows : [null];
     const memoTable = new D.Table({
       alignment: D.AlignmentType.CENTER, width: { size: 8400, type: D.WidthType.DXA }, columnWidths: [6000, 2400], borders: lineBorders,
       rows: [new D.TableRow({ children: [cell([P([R('สถานที่', 14)], { alignment: D.AlignmentType.CENTER })], 6000), cell([P([R('ค่าตัวคูณปรับแก้', 14)], { alignment: D.AlignmentType.CENTER })], 2400)] })]
         .concat(factor.map((x) => new D.TableRow({ children: [
-          cell([P([R(x ? x.m.place : '– ไม่มีมาตรที่ต้องใช้ค่าตัวคูณปรับแก้ –', 14)])], 6000),
-          cell([P([R(x ? th(C.fmt(x.k, 4)) : '-', 14)], { alignment: D.AlignmentType.CENTER })], 2400)
+          cell([P([R(x ? x.place : '– ไม่มีมาตรน้ำจ่ายที่ทดสอบ –', 14)])], 6000),
+          cell([P([R(x ? x.k : '-', 14)], { alignment: D.AlignmentType.CENTER })], 2400)
         ] })))
     });
 
@@ -301,7 +352,7 @@
           P([R('เพื่อโปรดพิจารณาแจ้ง กปภ.สาขา', 16)], { indent: { left: 900 } }),
           P([R('ดำเนินการในส่วนที่เกี่ยวข้องต่อไป จะขอบคุณยิ่ง', 16)]),
           P([R('', 16)]), P([R('', 16)]),
-          P([R('(' + p.endorserName + ')', 16)], { alignment: D.AlignmentType.CENTER }),
+          P([R(p.endorserName ? '(' + p.endorserName + ')' : '', 16)], { alignment: D.AlignmentType.CENTER }),
           P([R(p.endorserTitle, 16)], { alignment: D.AlignmentType.CENTER })
         ], W / 2, { borders: { top: none, bottom: none, left: none, right: none } }),
         cell([
@@ -340,7 +391,7 @@
       P([R(zw('จึงเรียนมาเพื่อโปรดทราบ และพิจารณาแจ้ง กปภ.สาขา' + p.branch + ' ให้ใช้ค่าตัวคูณปรับแก้ ตั้งแต่วันที่ ' + p.effective + ' เป็นต้นไป จะขอบคุณยิ่ง'), 16)],
         { alignment: thaiJustify, indent: { firstLine: pt(78) }, spacing: { before: pt(14) } }),
       P([R('', 16)]), P([R('', 16)]),
-      P([R('(' + p.signer + ')', 16)], { alignment: D.AlignmentType.CENTER, indent: { left: 4100 } }),
+      P([R(p.signer ? '(' + p.signer + ')' : '', 16)], { alignment: D.AlignmentType.CENTER, indent: { left: 4100 } }),
       P([R(p.signerTitle, 14)], { alignment: D.AlignmentType.CENTER, indent: { left: 4100 } }),
       P([R('', 16)]),
       boxes
@@ -388,7 +439,10 @@
     if (merges) ws['!merges'] = merges;
     return ws;
   }
-  function save(wb, name) { XLSX.writeFile(wb, name, { compression: true }); }
+  function save(wb, name) {
+    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array', compression: true });
+    UI.download(name, new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+  }
 
   function detailRows(rows) {
     const head = ['วันที่ทดสอบ', 'ปีงบ', 'ครั้งที่', 'กปภ.สาขา', 'สถานที่', 'ประเภท', 'ยี่ห้อ', 'รุ่น', 'ชนิด', 'ขนาด (มม.)', 'U เริ่ม', 'U ตัดยอด', 'M เริ่ม', 'M ตัดยอด', 'U (m³)', 'M (m³)', 'ตัวคูณเดิม', 'M* (m³)', 'คลาดเคลื่อน (%)', 'ตัวคูณครั้งนี้', 'ผล', 'ความเห็น', 'V (m/s)', 'สถานะการทำงาน', 'ล้างมาตร', 'อุปกรณ์ชำรุด', 'Battery MAG8000 (%)', 'หมายเหตุ', 'ผู้ทดสอบ', 'ผู้บันทึก', 'ละติจูด', 'ลองจิจูด'];

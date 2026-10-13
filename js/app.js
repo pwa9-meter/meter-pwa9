@@ -178,13 +178,42 @@
       const parts = s.split(/\s+/);
       return (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
     },
-    download(filename, blob) {
+    isMobile() {
+      return (window.matchMedia && matchMedia('(pointer: coarse)').matches) || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    },
+    saveLink(filename, blob) {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = filename;
+      a.rel = 'noopener';
       document.body.appendChild(a);
       a.click();
-      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      // mobile browsers read the blob late: keep the URL alive for a minute
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 60000);
+    },
+    // Phones (especially the installed app) often ignore <a download>: hand the file to the
+    // system share sheet instead, where it can be saved to Files/Drive or sent via LINE.
+    async download(filename, blob) {
+      const file = typeof File === 'function' ? new File([blob], filename, { type: blob.type || 'application/octet-stream' }) : null;
+      const canShare = UI.isMobile() && file && navigator.canShare && navigator.canShare({ files: [file] });
+      if (!canShare) { UI.saveLink(filename, blob); if (UI.isMobile()) UI.toast('ไฟล์อยู่ในโฟลเดอร์ "ดาวน์โหลด" ของเครื่อง', 'ok'); return; }
+      try {
+        await navigator.share({ files: [file], title: filename });
+        return;
+      } catch (e) {
+        if (e && e.name === 'AbortError') return; // user closed the sheet
+      }
+      // the tap that started the export has expired: ask for one more tap
+      await UI.modal(`<h2>ไฟล์พร้อมแล้ว</h2><div style="overflow-wrap:anywhere">${esc(filename)}</div>
+        <div class="modal-actions" style="justify-content:stretch">
+          <button class="btn" id="dl-link" style="flex:1">${icon('download')}ดาวน์โหลด</button>
+          <button class="btn btn-primary" id="dl-share" style="flex:1">${icon('upload', 18, '#fff')}บันทึก / แชร์</button>
+        </div>`, {
+        onOpen: (el, close) => {
+          el.querySelector('#dl-share').onclick = async () => { try { await navigator.share({ files: [file], title: filename }); } catch (e) { /* closed */ } close('ok'); };
+          el.querySelector('#dl-link').onclick = () => { UI.saveLink(filename, blob); close('ok'); };
+        }
+      });
     },
     pickFile(accept) {
       return new Promise((resolve) => {
@@ -239,7 +268,7 @@
   ];
 
   const App = {
-    VERSION: '1.2',
+    VERSION: '1.5',
     branch: '',
     cleanup: [],
     M, UI, icon,

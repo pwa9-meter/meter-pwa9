@@ -74,7 +74,7 @@
           </section>
 
           <section class="card">
-            <h2><span class="step">2</span>Ultrasonic Flowmeter เขตฯ (U)</h2>
+            <h2><span class="step">2</span>Ultrasonic Flowmeter เขต 9 (U)</h2>
             <div class="form-grid">
               <label class="field"><span>ยี่ห้อ</span><input data-d="brand" value="${v(t.device.brand)}" ${dis}></label>
               <label class="field"><span>รุ่น / เครื่องที่</span><input data-d="model" value="${v(t.device.model)}" ${dis}></label>
@@ -354,6 +354,8 @@
   V.reports = function (view, query) {
     const st = App.reportFilter = Object.assign({ fy: String(M.fy()), round: '', status: '', cat: '', tab: 'table' }, App.reportFilter || {}, query.status ? { status: query.status } : {});
     const memo = App.memo = App.memo || { no: '', date: C.todayISO(), period: '', effective: '' };
+    const toOptions = Array.from(new Set([S.data.settings.addressee || 'หัวหน้างานมาตรวัดน้ำ', 'หัวหน้างานมาตรวัดน้ำ', 'หัวหน้างานน้ำสูญเสีย']));
+    const toNow = memo.addressee || toOptions[0];
     const years = Array.from(new Set([M.fy(), M.fy() - 1, M.fy() - 2].concat(S.data.tests.map((t) => Number(t.fiscalYear))).filter(Boolean))).sort((a, b) => b - a);
 
     const rowsFor = () => {
@@ -411,6 +413,7 @@
           <label class="field"><span>กปภ.สาขา</span><select id="rp-branch">${UI.branchOptions(App.branch, true)}</select></label>
           <label class="field"><span>ปีงบประมาณ</span><select id="rp-fy">${years.map((y) => `<option ${String(y) === st.fy ? 'selected' : ''}>${y}</option>`).join('')}</select></label>
           <label class="field"><span>ครั้งที่</span><select id="rp-round"><option value="">ทุกครั้ง</option>${['1', '2', '3', '4'].map((r) => `<option ${st.round === r ? 'selected' : ''}>${r}</option>`).join('')}</select></label>
+          <label class="field"><span>บันทึกข้อความ: เรียน</span><select id="rp-to">${toOptions.map((t) => `<option ${t === toNow ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
         </div>
         <div class="chips">${chip('status', '', 'ทุกผล')}${chip('status', 'pass', 'ผ่านเกณฑ์')}${chip('status', 'factor', 'เสนอตัวคูณ')}${chip('status', 'broken', 'มาตรชำรุด')}
           <span style="width:1px;background:var(--line);margin:0 4px"></span>${chip('cat', '', 'ทุกประเภท')}${chip('cat', 'มาตรน้ำจ่าย', 'น้ำจ่าย')}${chip('cat', 'มาตรน้ำดิบ', 'น้ำดิบ')}</div>
@@ -426,6 +429,7 @@
     view.querySelector('#rp-branch').onchange = (e) => { App.branch = e.target.value; try { localStorage.setItem('mpw9.branch', App.branch); } catch (x) { /* ignore */ } App.renderTop(); draw(); };
     view.querySelector('#rp-fy').onchange = (e) => { st.fy = e.target.value; draw(); };
     view.querySelector('#rp-round').onchange = (e) => { st.round = e.target.value; draw(); };
+    view.querySelector('#rp-to').onchange = (e) => { memo.addressee = e.target.value; if (st.tab !== 'memo') st.tab = 'memo'; draw(); };
     view.querySelectorAll('.chip[data-k]').forEach((b) => {
       b.onclick = () => {
         st[b.getAttribute('data-k')] = b.getAttribute('data-v');
@@ -532,11 +536,11 @@
         <div class="form-grid">
           <label class="field span-all"><span>ส่วนราชการ</span><input id="st-unit" class="input" value="${esc(s.unitLine)}"></label>
           <label class="field"><span>เรียน</span><input id="st-to" class="input" value="${esc(s.addressee)}"></label>
-          <label class="field"><span>ชื่อผู้ลงนาม</span><input id="st-sn" class="input" value="${esc(s.signerName || S.DEFAULT_SETTINGS.signerName)}" placeholder="(ชื่อ-สกุล)"></label>
-          <label class="field"><span>ตำแหน่งผู้ลงนาม</span><input id="st-st" class="input" value="${esc(s.signerTitle || S.DEFAULT_SETTINGS.signerTitle)}"></label>
+          <label class="field"><span>ชื่อผู้ลงนาม</span><input id="st-sn" class="input" value="${esc(s.signerName)}" placeholder="เว้นว่าง = เซ็นด้วยมือ"></label>
+          <label class="field"><span>ตำแหน่งผู้ลงนาม</span><input id="st-st" class="input" value="${esc(s.signerTitle)}" placeholder="เว้นว่าง = เขียนเอง"></label>
           <label class="field"><span>ช่องเกษียน: เรียน</span><input id="st-et" class="input" value="${esc(s.endorseTo || S.DEFAULT_SETTINGS.endorseTo)}"></label>
-          <label class="field"><span>ช่องเกษียน: ชื่อผู้ลงนาม</span><input id="st-en" class="input" value="${esc(s.endorserName || S.DEFAULT_SETTINGS.endorserName)}"></label>
-          <label class="field"><span>ช่องเกษียน: ตำแหน่ง</span><input id="st-ett" class="input" value="${esc(s.endorserTitle || S.DEFAULT_SETTINGS.endorserTitle)}"></label>
+          <label class="field"><span>ช่องเกษียน: ชื่อผู้ลงนาม</span><input id="st-en" class="input" value="${esc(s.endorserName)}" placeholder="เว้นว่าง = เซ็นด้วยมือ"></label>
+          <label class="field"><span>ช่องเกษียน: ตำแหน่ง</span><input id="st-ett" class="input" value="${esc(s.endorserTitle)}" placeholder="เว้นว่าง = เขียนเอง"></label>
         </div>
         <div><button class="btn btn-primary" id="st-save">บันทึกการตั้งค่า</button></div>
       </section>
