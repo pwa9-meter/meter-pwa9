@@ -70,6 +70,8 @@
   const asset = (p) => new URL(p, document.baseURI).href;
 
   function roundLabel(o) { return `${o.round || '…'}/${o.fy}`; }
+  // factor shown in every table: the proposed factor when one applies, otherwise 1.0000; none for a broken meter
+  const kOf = (x) => (x.t.broken ? null : (x.k || 1));
 
   // ---------- summary table (ตารางสรุปผลการตรวจสอบมาตรหลัก) ----------
   function summaryHTML(rows, o) {
@@ -78,7 +80,7 @@
       <td class="c">${i + 1}</td>${showBranch ? `<td>${esc(x.m.branch)}</td>` : ''}<td>${esc(x.m.place)}</td><td>${esc(x.m.brand)}</td><td>${esc(x.m.model)}</td>
       <td>${esc(x.m.kind)}</td><td class="c">${esc(x.m.size)}</td>
       <td class="c">${x.t.broken ? '-' : C.fmtSigned(x.c.err, 2)}</td>
-      <td class="c">${x.k ? C.fmt(x.k, 4) : '-'}</td>
+      <td class="c">${kOf(x) ? C.fmt(kOf(x), 4) : '-'}</td>
       <td>${x.t.broken ? 'มาตรชำรุด' : esc([x.r === 'factor' ? 'เสนอใช้ตัวคูณ' : '', x.t.note || ''].filter(Boolean).join(' · '))}</td></tr>`).join('');
     return `<div class="doc-stage"><div class="paper paper-land print-land">
       <div class="doc-title">ตารางที่ 1 ผลการทดสอบความเที่ยงตรงของมาตรวัดน้ำหลัก กปภ.สาขา${esc(o.branch || '…………')} ครั้งที่ ${esc(roundLabel(o))}</div>
@@ -99,7 +101,7 @@
     const factorRows = rows.filter((x) => x.r === 'factor');
     const brokenRows = rows.filter((x) => x.r === 'broken');
     // memo table: same places as the summary table, distribution meters only (no raw-water meters)
-    const placeRows = rows.filter((x) => !C.isRaw(x.m)).map((x) => ({ place: x.m.place, k: x.k ? th(C.fmt(x.k, 4)) : '-' }));
+    const placeRows = rows.filter((x) => !C.isRaw(x.m)).map((x) => ({ place: x.m.place, k: kOf(x) ? th(C.fmt(kOf(x), 4)) : 'มาตรชำรุด' }));
     const D = Store.DEFAULT_SETTINGS || {};
     const pick = (k) => s[k] || D[k] || '';
     return {
@@ -118,7 +120,7 @@
   // attachment rows shared by the on-screen page and the .docx
   function attachmentRows(rows) {
     return rows.map((x, i) => [th(i + 1), x.m.branch, x.m.place, x.m.brand, x.m.model, x.m.kind, th(x.m.size || '-'),
-      x.t.broken ? '-' : th(C.fmtSigned(x.c.err, 2)), x.k ? th(C.fmt(x.k, 4)) : '-', x.t.broken ? 'มาตรชำรุด' : (x.t.note || '')]);
+      x.t.broken ? '-' : th(C.fmtSigned(x.c.err, 2)), kOf(x) ? th(C.fmt(kOf(x), 4)) : '-', x.t.broken ? 'มาตรชำรุด' : (x.t.note || '')]);
   }
   const ATT_HEAD = ['ลำดับที่', 'กปภ.สาขา', 'สถานที่', 'ยี่ห้อ', 'รุ่น', 'ชนิด', 'ขนาด (มม.)', 'ค่าความคลาดเคลื่อน (%)', 'ค่าตัวคูณปรับแก้', 'หมายเหตุ'];
   const ATT_HEAD_HTML = ['ลำดับที่', 'กปภ.สาขา', 'สถานที่', 'ยี่ห้อ', 'รุ่น', 'ชนิด', 'ขนาด<br>(มม.)', 'ค่าความ<br>คลาดเคลื่อน (%)', 'ค่าตัวคูณ<br>ปรับแก้', 'หมายเหตุ'];
@@ -465,7 +467,7 @@
     const h1 = ['ลำดับที่'].concat(showBranch ? ['กปภ.สาขา'] : [], ['สถานที่', 'ยี่ห้อ', 'รุ่น', 'ชนิด', 'ขนาด', 'ค่าความคลาดเคลื่อน', 'ค่าตัวคูณปรับแก้', 'หมายเหตุ']);
     const h2 = [''].concat(showBranch ? [''] : [], ['', '', '', '', '(mm.)', '(%)', '', '']);
     const body = rows.map((x, i) => [i + 1].concat(showBranch ? [x.m.branch] : [], [x.m.place, x.m.brand, x.m.model, x.m.kind, x.m.size,
-      x.t.broken ? '-' : +x.c.err.toFixed(2), x.k ? +x.k.toFixed(4) : '-', x.t.broken ? 'มาตรชำรุด' : (x.t.note || '')]));
+      x.t.broken ? '-' : +x.c.err.toFixed(2), kOf(x) ? C.fmt(kOf(x), 4) : '-', x.t.broken ? 'มาตรชำรุด' : (x.t.note || '')]));
     const n = h1.length;
     const aoa = [[title], [], h1, h2].concat(body);
     const merges = [{ s: { r: 0, c: 0 }, e: { r: 0, c: n - 1 } }];

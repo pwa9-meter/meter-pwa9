@@ -268,7 +268,7 @@
   ];
 
   const App = {
-    VERSION: '1.5',
+    VERSION: '1.7',
     branch: '',
     cleanup: [],
     M, UI, icon,
@@ -423,6 +423,7 @@
       m.setAttribute('role', 'menu');
       m.innerHTML = `<div class="menu-head" style="display:flex;gap:12px;align-items:center">${UI.avatar(s, 44)}<div><b>${esc(s.name)}</b>รหัสพนักงาน ${esc(s.empId)}</div></div>
         <a href="#/account" role="menuitem">${icon('users')}รูปโปรไฟล์ / เปลี่ยนรหัสผ่าน</a>
+        <a href="#/account" role="menuitem" onclick="setTimeout(()=>{const c=document.getElementById('theme-card');if(c)c.scrollIntoView({behavior:'smooth'})},150)">${icon('drop')}ธีมสี</a>
         ${S.isAdmin() ? `<a href="#/users" role="menuitem">${icon('users')}จัดการผู้ใช้งาน</a><a href="#/settings" role="menuitem">${icon('settings')}ตั้งค่าระบบ</a>` : ''}
         <a href="#/branches" role="menuitem">${icon('branch')}ความคืบหน้า 27 สาขา</a>
         <a href="#/equipment" role="menuitem">${icon('check')}Check list อุปกรณ์</a>

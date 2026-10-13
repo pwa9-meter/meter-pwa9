@@ -1,8 +1,8 @@
 /* Meter P.W.A 9 — service worker: app shell offline, CDN + map tiles cached as you go */
-const VERSION = 'mpw9-v7';
+const VERSION = 'mpw9-v9';
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './css/app.css',
-  './js/config.js', './js/seed.js', './js/core.js', './js/store.js', './js/app.js',
+  './js/config.js', './js/theme.js', './js/seed.js', './js/core.js', './js/store.js', './js/app.js',
   './js/views-a.js', './js/views-b.js', './js/exports.js',
   './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png',
   './img/pwa-seal.png', './img/footer-pwa.png'

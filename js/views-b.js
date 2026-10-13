@@ -621,7 +621,7 @@
   // ---------- account ----------
   V.account = function (view) {
     view.innerHTML = `<div class="page" style="max-width:520px">
-      <div class="page-head"><h1>บัญชีของฉัน</h1></div>
+      <div class="page-head"><h1>บัญชีและธีมสี</h1></div>
       <section class="card">
         <h2>รูปโปรไฟล์</h2>
         <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
@@ -632,6 +632,13 @@
           </div>
         </div>
         <div class="muted" style="font-size:13px">ระบบจะครอปเป็นสี่เหลี่ยมจัตุรัสและย่อขนาดให้อัตโนมัติ</div>
+      </section>
+      <section class="card" id="theme-card">
+        <h2>ธีมสี</h2>
+        <div class="muted" style="font-size:13px">เลือกได้ทันที ใช้กับเครื่องนี้เท่านั้น เอกสารที่พิมพ์ออกยังเป็นขาว-ดำตามแบบฟอร์ม</div>
+        <div class="theme-grid">${window.Theme.THEMES.map((t) => `<button type="button" class="theme-opt" data-theme-id="${t.id}" aria-pressed="${t.id === window.Theme.current()}">
+          <span class="theme-sw"><span style="background:${t.brand}"></span><span style="background:${t.accent}"></span><span style="background:${t.dark ? '#161B22' : '#F3F6FA'}"></span></span>
+          <span><b>${esc(t.name)}</b>${t.dark ? ' <span class="muted" style="font-size:12px">· โหมดมืด</span>' : ''}</span></button>`).join('')}</div>
       </section>
       <h2 style="margin:6px 0 0;font-size:18px">เปลี่ยนรหัสผ่าน</h2>
       <form class="card" id="ac-form">
@@ -654,6 +661,13 @@
       if (!f) return;
       try { await savePic(await UI.readAvatar(f)); } catch (ex) { UI.toast('อ่านรูปไม่ได้', 'bad'); }
     };
+    view.querySelectorAll('[data-theme-id]').forEach((b) => {
+      b.onclick = () => {
+        const t = window.Theme.set(b.getAttribute('data-theme-id'));
+        view.querySelectorAll('[data-theme-id]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+        UI.toast('เปลี่ยนเป็นธีม ' + t.name, 'ok');
+      };
+    });
     const rm = view.querySelector('#ac-pic-rm');
     if (rm) rm.onclick = () => savePic('');
     view.querySelector('#ac-form').onsubmit = async (e) => {
