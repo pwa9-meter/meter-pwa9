@@ -328,9 +328,21 @@
       return rec;
     },
 
+    // photos taken offline only exist in this browser: upload them so the whole team can see them
+    async uploadPendingPhotos(list) {
+      if (this.mode !== 'remote' || !navigator.onLine) return;
+      for (const p of list || []) {
+        if (p.url) continue;
+        const data = await kvGet(p.id, 'photos');
+        if (!data) continue;
+        try { p.url = (await api('savePhoto', { id: p.id, dataUrl: data })).url; } catch (e) { return; }
+      }
+    },
+
     async saveMeter(m) {
       if (!this.canEdit()) throw new Error('ไม่มีสิทธิ์แก้ไข');
       if (!m.id) m.id = uid('m');
+      await this.uploadPendingPhotos(m.sitePhotos);
       await this.write('saveMeter', { meter: this.stamp(m) });
       return m;
     },

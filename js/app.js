@@ -268,7 +268,7 @@
   ];
 
   const App = {
-    VERSION: '1.7',
+    VERSION: '1.8',
     branch: '',
     cleanup: [],
     M, UI, icon,

@@ -408,7 +408,10 @@
             <div class="timeline">${maint.map((x) => `<div><time>${C.thDate(x.date)}</time><span>${esc(x.text)}${x.by ? ` <span class="muted">· ${esc(x.by)}</span>` : ''}</span></div>`).join('') || '<span class="muted">ยังไม่มีบันทึก</span>'}</div>
           </div>
         </section>
-      </div></div>`;
+      </div>
+      <section class="card" id="p-site"></section>
+      </div>`;
+    V.sitePhotos(view.querySelector('#p-site'), m, { editable: S.canEdit(), onChange: () => V.meterProfile(view, id) });
 
     view.querySelectorAll('tr[data-href]').forEach((tr) => { tr.onclick = () => { location.hash = tr.getAttribute('data-href'); }; });
     V.miniMap(view.querySelector('#p-map'), m);
@@ -587,7 +590,9 @@
           <a class="btn" style="flex:1" href="#/meter/${m.id}">ประวัติมาตร</a>
           <a class="btn btn-block" href="${UI.navUrl(m)}" target="_blank" rel="noopener">${icon('nav')}นำทางด้วย Google Maps</a>
         </div>
+        <div id="mp-site" style="border-top:1px solid var(--line-2);padding-top:12px"></div>
         ${near.length ? `<div style="border-top:1px solid var(--line-2);padding-top:12px"><h3 style="margin-bottom:6px">มาตรใกล้เคียง</h3>${near.map((n) => `<a class="list-item" href="#/meter/${n.x.id}">${C.symbol(n.x, { size: 22 })}<span class="list-main"><span class="list-title">${esc(n.x.place)}</span></span><span class="muted" style="font-size:13px">${n.d < 1 ? Math.round(n.d * 1000) + ' ม.' : C.fmt(n.d, 1) + ' กม.'}</span></a>`).join('')}</div>` : ''}`;
+      V.sitePhotos(side.querySelector('#mp-site'), m, { compact: true, editable: S.canEdit(), onChange: () => select(M.meter(m.id)) });
     };
 
     const draw = () => {
@@ -631,6 +636,77 @@
     });
     ro.observe(map.getContainer());
     App.cleanup.push(() => ro.disconnect());
+  };
+
+  // ---------- site photos: where the control cabinet and the meter sensor are ----------
+  const SITE_KINDS = [
+    { k: 'cabinet', label: 'รูปถ่ายบริเวณตู้ควบคุม', hint: 'เช่น ตู้อยู่หลังป้อมยาม ห่างจากมาตร 20 ม.' },
+    { k: 'sensor', label: 'รูปถ่ายบริเวณหัวเซนเซอร์มาตรวัดน้ำ', hint: 'เช่น บ่อพักริมถนน ฝาเหล็กสีเขียว' }
+  ];
+  V.sitePhotos = function (el, m, opt) {
+    if (!el) return;
+    const o = opt || {};
+    const photos = m.sitePhotos || [];
+    const tile = (p) => `<button type="button" class="site-tile" data-pid="${esc(p.id)}" aria-label="ดูรูป ${esc(p.caption || '')}">
+        <img alt="" data-src-id="${esc(p.id)}">${p.caption && !o.compact ? `<span class="site-cap">${esc(p.caption)}</span>` : ''}${!p.url && S.mode === 'remote' ? '<span class="site-wait" title="ยังไม่ได้อัปโหลด">รออัปโหลด</span>' : ''}</button>`;
+    el.innerHTML = `${o.compact ? '<h3 style="margin-bottom:8px">รูปถ่ายตำแหน่งมาตร</h3>' : '<div class="card-head"><h2>รูปถ่ายตำแหน่งมาตร</h2><span class="muted" style="font-size:13px">ช่วยให้คนที่มาทีหลังหาตู้ควบคุมและหัวเซนเซอร์เจอ</span></div>'}
+      ${SITE_KINDS.map((s) => {
+        const list = photos.filter((p) => p.kind === s.k);
+        const shown = o.compact ? list.slice(0, 3) : list;
+        return `<div class="site-group"><div class="site-title">${esc(s.label)} <span class="muted">(${list.length})</span></div>
+          <div class="site-grid ${o.compact ? 'compact' : ''}">${shown.map(tile).join('')}
+            ${o.editable ? `<button type="button" class="site-add" data-add="${s.k}">${icon('camera', 22)}<span>เพิ่มรูป</span></button>` : ''}
+            ${!list.length && !o.editable ? '<span class="muted" style="font-size:13px">ยังไม่มีรูป</span>' : ''}</div></div>`;
+      }).join('')}`;
+    el.querySelectorAll('img[data-src-id]').forEach(async (img) => {
+      const p = photos.find((x) => x.id === img.getAttribute('data-src-id'));
+      const src = p && (await S.photoSrc(p));
+      if (src) img.src = src; else img.replaceWith(Object.assign(document.createElement('span'), { className: 'site-missing', textContent: 'รูปอยู่ในเครื่องอื่น' }));
+    });
+    el.querySelectorAll('[data-pid]').forEach((b) => {
+      b.onclick = async () => {
+        const p = photos.find((x) => x.id === b.getAttribute('data-pid'));
+        if (!p) return;
+        const kind = SITE_KINDS.find((s) => s.k === p.kind) || SITE_KINDS[0];
+        const src = await S.photoSrc(p);
+        const r = await UI.modal(`<h2 style="font-size:17px">${esc(kind.label)}</h2>
+          ${src ? `<img src="${esc(src)}" alt="" style="width:100%;border-radius:10px;display:block;max-height:70vh;object-fit:contain;background:#000">` : '<div class="empty">ไม่พบไฟล์รูป</div>'}
+          ${p.caption ? `<div style="font-size:15px">${esc(p.caption)}</div>` : ''}
+          <div class="muted" style="font-size:13px">${esc(m.place)} · ${C.thDate(p.date)}${p.by ? ' · ' + esc(p.by) : ''}</div>
+          <div class="modal-actions">${o.editable ? '<button class="btn btn-danger" data-close="del">ลบรูป</button>' : ''}<button class="btn btn-primary" data-close="">ปิด</button></div>`, { wide: true });
+        if (r !== 'del') return;
+        if (!(await UI.confirm('ลบรูปนี้?', 'รูปจะถูกลบออกจากมาตรนี้', 'ลบรูป', true))) return;
+        m.sitePhotos = (m.sitePhotos || []).filter((x) => x.id !== p.id);
+        await S.saveMeter(m);
+        UI.toast('ลบรูปแล้ว');
+        if (o.onChange) o.onChange();
+      };
+    });
+    el.querySelectorAll('[data-add]').forEach((b) => {
+      b.onclick = async () => {
+        const kind = SITE_KINDS.find((s) => s.k === b.getAttribute('data-add'));
+        const f = await UI.pickFile('image/*');
+        if (!f) return;
+        let data;
+        try { data = await UI.readPhoto(f); } catch (e) { return UI.toast('อ่านรูปไม่ได้', 'bad'); }
+        let caption = '';
+        const ok = await UI.modal(`<h2 style="font-size:17px">${esc(kind.label)}</h2>
+          <img src="${data}" alt="" style="width:100%;border-radius:10px;display:block;max-height:45vh;object-fit:contain;background:#000">
+          <label class="field"><span>คำอธิบาย (ไม่บังคับ)</span><input id="sp-cap" class="input" placeholder="${esc(kind.hint)}"></label>
+          <div class="modal-actions"><button class="btn" data-close="">ยกเลิก</button><button class="btn btn-primary" data-close="ok">บันทึกรูป</button></div>`,
+        { onOpen: (dlg) => { dlg.querySelector('#sp-cap').oninput = (e) => { caption = e.target.value; }; } });
+        if (ok !== 'ok') return;
+        b.disabled = true;
+        UI.toast('กำลังบันทึกรูป…');
+        try {
+          const saved = await S.savePhoto(data);
+          m.sitePhotos = (m.sitePhotos || []).concat([{ id: saved.id, url: saved.url, kind: kind.k, caption: caption.trim(), date: C.todayISO(), by: S.session.name }]);
+          await S.saveMeter(m);
+          UI.toast(S.mode === 'remote' && !saved.url ? 'บันทึกรูปในเครื่องแล้ว จะอัปโหลดให้ทีมเห็นเมื่อมีสัญญาณ' : 'บันทึกรูปแล้ว', 'ok');
+          if (o.onChange) o.onChange();
+        } catch (e) { UI.toast(e.message, 'bad'); b.disabled = false; }
+      };
+    });
   };
 
   // ---------- 27 branches ----------
